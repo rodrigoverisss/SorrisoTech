@@ -136,7 +136,8 @@ export default function Settings() {
     ];
   });
 
-  const [newUser, setNewUser] = useState<Partial<User>>({});
+  const [newUser, setNewUser] = useState<Partial<User> & { password?: string }>({});
+  const [showNewUserPwd, setShowNewUserPwd] = useState(false);
   const [showUserForm, setShowUserForm] = useState(false);
 
   // Notifications
@@ -173,18 +174,24 @@ export default function Settings() {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
+    if (!newUser.password || newUser.password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
 
-    const user: User = {
+    const user = {
       id: generateId(),
       name: newUser.name,
       email: newUser.email,
       role: newUser.role as 'admin' | 'dentist' | 'receptionist',
+      password: newUser.password,
     };
 
     const updatedUsers = [...users, user];
-    setUsers(updatedUsers);
+    setUsers(updatedUsers as User[]);
     localStorage.setItem('sorrisotech_users', JSON.stringify(updatedUsers));
     setNewUser({});
+    setShowNewUserPwd(false);
     setShowUserForm(false);
     toast.success('Usuário adicionado com sucesso!');
   };
@@ -578,6 +585,29 @@ export default function Settings() {
                       value={newUser.email || ''}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserPassword">Senha *</Label>
+                    <div className="relative">
+                      <Input
+                        id="newUserPassword"
+                        type={showNewUserPwd ? 'text' : 'password'}
+                        value={newUser.password || ''}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        placeholder="Mínimo 6 caracteres"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewUserPwd(!showNewUserPwd)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showNewUserPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {newUser.password && newUser.password.length > 0 && newUser.password.length < 6 && (
+                      <p className="text-xs text-destructive">A senha deve ter pelo menos 6 caracteres</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newUserRole">Perfil de Acesso *</Label>
