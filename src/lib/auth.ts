@@ -59,6 +59,41 @@ export const isAuthenticated = (): boolean => {
   return getCurrentUser() !== null;
 };
 
+export const updateCurrentUser = (updates: Partial<User>): boolean => {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return false;
+
+  // Update session
+  const updated = { ...currentUser, ...updates };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+  // Update in users list
+  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const index = users.findIndex((u: any) => u.id === currentUser.id);
+  if (index !== -1) {
+    users[index] = { ...users[index], ...updates };
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+
+  return true;
+};
+
+export const changePassword = (currentPassword: string, newPassword: string): boolean => {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return false;
+
+  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const user = users.find((u: any) => u.id === currentUser.id);
+
+  if (!user || user.password !== currentPassword) return false;
+
+  user.password = newPassword;
+  const index = users.findIndex((u: any) => u.id === currentUser.id);
+  users[index] = user;
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  return true;
+};
+
 export const hasPermission = (requiredRole: User['role']): boolean => {
   const user = getCurrentUser();
   if (!user) return false;

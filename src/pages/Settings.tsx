@@ -24,6 +24,9 @@ import {
 } from 'lucide-react';
 import { User } from '@/types';
 import { generateId } from '@/lib/utils';
+import { getCurrentUser, updateCurrentUser, changePassword } from '@/lib/auth';
+import { toast } from 'sonner';
+import { UserCircle, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface ClinicConfig {
   name: string;
@@ -54,7 +57,58 @@ interface ThemeConfig {
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState('clinic');
+  const [activeTab, setActiveTab] = useState('profile');
+
+  // Current User Profile
+  const currentUser = getCurrentUser();
+  const [profileData, setProfileData] = useState({
+    name: currentUser?.name || '',
+    email: currentUser?.email || '',
+    role: currentUser?.role || 'dentist',
+  });
+  const [passwordData, setPasswordData] = useState({
+    current: '',
+    newPass: '',
+    confirm: '',
+  });
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+
+  const handleSaveProfile = () => {
+    if (!profileData.name.trim() || !profileData.email.trim()) {
+      toast.error('Nome e email são obrigatórios');
+      return;
+    }
+    const success = updateCurrentUser({ name: profileData.name, email: profileData.email, role: profileData.role as User['role'] });
+    if (success) {
+      toast.success('Perfil atualizado com sucesso!');
+    } else {
+      toast.error('Erro ao atualizar perfil');
+    }
+  };
+
+  const handleChangePassword = () => {
+    if (!passwordData.current || !passwordData.newPass || !passwordData.confirm) {
+      toast.error('Preencha todos os campos de senha');
+      return;
+    }
+    if (passwordData.newPass !== passwordData.confirm) {
+      toast.error('A nova senha e a confirmação não coincidem');
+      return;
+    }
+    if (passwordData.newPass.length < 6) {
+      toast.error('A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    const success = changePassword(passwordData.current, passwordData.newPass);
+    if (success) {
+      toast.success('Senha alterada com sucesso!');
+      setPasswordData({ current: '', newPass: '', confirm: '' });
+    } else {
+      toast.error('Senha atual incorreta');
+    }
+  };
 
   // Clinic Configuration
   const [clinicConfig, setClinicConfig] = useState<ClinicConfig>(() => {
@@ -111,12 +165,12 @@ export default function Settings() {
 
   const handleSaveClinic = () => {
     localStorage.setItem('sorrisotech_clinic_config', JSON.stringify(clinicConfig));
-    alert('Configurações da clínica salvas com sucesso!');
+    toast.success('Configurações da clínica salvas com sucesso!');
   };
 
   const handleAddUser = () => {
     if (!newUser.name || !newUser.email || !newUser.role) {
-      alert('Preencha todos os campos obrigatórios');
+      toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
@@ -132,31 +186,29 @@ export default function Settings() {
     localStorage.setItem('sorrisotech_users', JSON.stringify(updatedUsers));
     setNewUser({});
     setShowUserForm(false);
-    alert('Usuário adicionado com sucesso!');
+    toast.success('Usuário adicionado com sucesso!');
   };
 
   const handleDeleteUser = (userId: string) => {
     if (userId === 'admin') {
-      alert('Não é possível excluir o administrador principal');
+      toast.error('Não é possível excluir o administrador principal');
       return;
     }
-
-    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
     const updatedUsers = users.filter(u => u.id !== userId);
     setUsers(updatedUsers);
     localStorage.setItem('sorrisotech_users', JSON.stringify(updatedUsers));
-    alert('Usuário excluído com sucesso!');
+    toast.success('Usuário excluído com sucesso!');
   };
 
   const handleSaveNotifications = () => {
     localStorage.setItem('sorrisotech_notifications', JSON.stringify(notifications));
-    alert('Configurações de notificações salvas com sucesso!');
+    toast.success('Configurações de notificações salvas com sucesso!');
   };
 
   const handleSaveTheme = () => {
     localStorage.setItem('sorrisotech_theme', JSON.stringify(theme));
-    alert('Tema salvo com sucesso! Recarregue a página para aplicar as alterações.');
+    toast.success('Tema salvo! Recarregue a página para aplicar as alterações.');
   };
 
   const handleBackup = () => {
@@ -178,7 +230,7 @@ export default function Settings() {
     a.download = `backup-sorrisotech-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    alert('Backup gerado com sucesso!');
+    toast.success('Backup gerado com sucesso!');
   };
 
   const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,18 +241,15 @@ export default function Settings() {
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target?.result as string);
-        
-        if (confirm('Tem certeza que deseja restaurar este backup? Todos os dados atuais serão substituídos.')) {
-          Object.keys(data).forEach(key => {
-            if (data[key]) {
-              localStorage.setItem(`sorrisotech_${key}`, data[key]);
-            }
-          });
-          alert('Backup restaurado com sucesso! Recarregue a página.');
-          window.location.reload();
-        }
+        Object.keys(data).forEach(key => {
+          if (data[key]) {
+            localStorage.setItem(`sorrisotech_${key}`, data[key]);
+          }
+        });
+        toast.success('Backup restaurado com sucesso! Recarregando...');
+        setTimeout(() => window.location.reload(), 1500);
       } catch (error) {
-        alert('Erro ao restaurar backup. Arquivo inválido.');
+        toast.error('Erro ao restaurar backup. Arquivo inválido.');
       }
     };
     reader.readAsText(file);
@@ -214,7 +263,11 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="profile">
+            <UserCircle className="h-4 w-4 mr-2" />
+            Meu Perfil
+          </TabsTrigger>
           <TabsTrigger value="clinic">
             <Building2 className="h-4 w-4 mr-2" />
             Clínica
@@ -240,6 +293,172 @@ export default function Settings() {
             Backup
           </TabsTrigger>
         </TabsList>
+
+        {/* My Profile */}
+        <TabsContent value="profile" className="space-y-6">
+          {/* Profile info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCircle className="h-5 w-5 text-primary" />
+                Dados do Perfil
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4 pb-4 border-b">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white text-2xl font-bold">
+                  {profileData.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-lg">{profileData.name}</p>
+                  <p className="text-sm text-muted-foreground">{profileData.email}</p>
+                  <span className="inline-block mt-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                    {profileData.role === 'admin' ? 'Administrador' : profileData.role === 'dentist' ? 'Dentista' : 'Recepcionista'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="profileName">Nome Completo *</Label>
+                  <Input
+                    id="profileName"
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profileEmail">Email *</Label>
+                  <Input
+                    id="profileEmail"
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    placeholder="seu@email.com"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="profileRole">Perfil de Acesso</Label>
+                  <Select
+                    value={profileData.role}
+                    onValueChange={(value) => setProfileData({ ...profileData, role: value })}
+                    disabled={currentUser?.role !== 'admin'}
+                  >
+                    <SelectTrigger id="profileRole">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="dentist">Dentista</SelectItem>
+                      <SelectItem value="receptionist">Recepcionista</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {currentUser?.role !== 'admin' && (
+                    <p className="text-xs text-muted-foreground">Somente administradores podem alterar o perfil de acesso.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSaveProfile}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Salvar Perfil
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Change Password */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-primary" />
+                Alterar Senha
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPwd">Senha Atual *</Label>
+                <div className="relative">
+                  <Input
+                    id="currentPwd"
+                    type={showCurrentPwd ? 'text' : 'password'}
+                    value={passwordData.current}
+                    onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
+                    placeholder="Digite sua senha atual"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPwd(!showCurrentPwd)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPwd">Nova Senha *</Label>
+                <div className="relative">
+                  <Input
+                    id="newPwd"
+                    type={showNewPwd ? 'text' : 'password'}
+                    value={passwordData.newPass}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPass: e.target.value })}
+                    placeholder="Mínimo 6 caracteres"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPwd(!showNewPwd)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {passwordData.newPass.length > 0 && passwordData.newPass.length < 6 && (
+                  <p className="text-xs text-destructive">A senha deve ter pelo menos 6 caracteres</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPwd">Confirmar Nova Senha *</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPwd"
+                    type={showConfirmPwd ? 'text' : 'password'}
+                    value={passwordData.confirm}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
+                    placeholder="Repita a nova senha"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPwd(!showConfirmPwd)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showConfirmPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {passwordData.confirm && passwordData.newPass !== passwordData.confirm && (
+                  <p className="text-xs text-destructive">As senhas não coincidem</p>
+                )}
+                {passwordData.confirm && passwordData.newPass === passwordData.confirm && passwordData.confirm.length >= 6 && (
+                  <p className="text-xs text-green-600">Senhas coincidem ✓</p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleChangePassword} variant="default">
+                  <Lock className="mr-2 h-4 w-4" />
+                  Alterar Senha
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Clinic Configuration */}
         <TabsContent value="clinic" className="space-y-6">
