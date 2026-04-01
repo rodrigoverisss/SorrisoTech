@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Shield,
   Sliders,
+  FilePen,
 } from 'lucide-react';
 
 const menuItems = [
@@ -30,6 +31,7 @@ const menuItems = [
   { icon: BarChart3, label: 'Relatórios', path: '/reports', roles: ['admin'] },
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp', roles: ['admin'] },
   { icon: Shield, label: 'Auditoria', path: '/audit', roles: ['admin'] },
+  { icon: FilePen, label: 'Documentos', path: '/documents', roles: ['admin', 'dentist'] },
   { icon: Sliders, label: 'Campos Personalizados', path: '/custom-fields', roles: ['admin'] },
   { icon: Settings, label: 'Configurações', path: '/settings', roles: ['admin'] },
 ];

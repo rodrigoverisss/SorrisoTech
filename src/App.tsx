@@ -14,6 +14,7 @@ import Settings from '@/pages/Settings';
 import WhatsAppConfig from '@/pages/WhatsAppConfig';
 import AuditLogs from '@/pages/AuditLogs';
 import CustomFields from '@/pages/CustomFields';
+import Documents from '@/pages/Documents';
 import NotFound from '@/pages/NotFound';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
@@ -52,6 +53,7 @@ function App() {
                       <Route path="/whatsapp" element={<WhatsAppConfig />} />
                       <Route path="/audit" element={<AuditLogs />} />
                       <Route path="/custom-fields" element={<CustomFields />} />
+                      <Route path="/documents" element={<Documents />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
