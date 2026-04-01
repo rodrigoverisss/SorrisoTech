@@ -18,7 +18,7 @@ export default function Dashboard() {
     const todayAppointments = allAppointments.filter(a => a.date === today);
 
     const upcomingAppointments = allAppointments
-      .filter(a => new Date(a.date + 'T' + a.time) > new Date())
+      .filter(a => a.status !== 'cancelled' && new Date(a.date + 'T' + a.time) > new Date())
       .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())
       .slice(0, 5);
 
@@ -234,10 +234,20 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {stats.upcomingAppointments.map((apt) => {
                   const patient = patients.getById(apt.patientId);
+                  // Nome para avaliações (patientId começa com 'eval-')
+                  const evalName = apt.notes?.match(/\[Avaliação: (.+?)\]/)?.[1];
+                  const displayName = apt.patientId?.startsWith('eval-')
+                    ? (evalName || 'Avaliação')
+                    : patient?.name || 'Paciente não encontrado';
                   return (
                     <div key={apt.id} className="flex items-center justify-between border-b pb-3 last:border-0">
                       <div className="space-y-1">
-                        <p className="font-medium">{patient?.name || 'Paciente não encontrado'}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{displayName}</p>
+                          {apt.patientId?.startsWith('eval-') && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Avaliação</span>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">{apt.procedureType}</p>
                       </div>
                       <div className="text-right">

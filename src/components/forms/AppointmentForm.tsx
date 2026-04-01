@@ -8,7 +8,7 @@ import { appointments, patients } from '@/lib/storage';
 import { logAction } from '@/lib/audit';
 import { generateId } from '@/lib/utils';
 import { Appointment } from '@/types';
-import { X } from 'lucide-react';
+import { X, UserPlus } from 'lucide-react';
 
 interface AppointmentFormProps {
   appointment?: Appointment;
@@ -29,6 +29,16 @@ export default function AppointmentForm({ appointment, onClose }: AppointmentFor
     }
   );
 
+  // Paciente avaliação (sem cadastro)
+  const [isEvaluation, setIsEvaluation] = useState(
+    appointment?.patientId?.startsWith('eval-') || false
+  );
+  const [evalName, setEvalName] = useState(
+    appointment?.patientId?.startsWith('eval-')
+      ? appointment.notes?.match(/\[Avaliação: (.+?)\]/)?.[1] || ''
+      : ''
+  );
+
   const allPatients = patients.getAll();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -46,8 +56,17 @@ export default function AppointmentForm({ appointment, onClose }: AppointmentFor
       notes: formData.notes,
     };
 
+    // Se for avaliação, gerar ID temporário e registrar nome nas notas
+    if (isEvaluation) {
+      appointmentData.patientId = `eval-${generateId()}`;
+      const baseName = evalName.trim() || 'Avaliação';
+      appointmentData.notes = `[Avaliação: ${baseName}]${formData.notes ? ' ' + formData.notes : ''}`;
+    }
+
     const patient = patients.getById(appointmentData.patientId);
-    const patientName = patient?.name || 'Paciente';
+    const patientName = isEvaluation
+      ? (evalName.trim() || 'Avaliação')
+      : patient?.name || 'Paciente';
 
     if (appointment) {
       appointments.update(appointment.id, appointmentData);
@@ -74,24 +93,65 @@ export default function AppointmentForm({ appointment, onClose }: AppointmentFor
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
+            {/* Toggle paciente cadastrado / avaliação */}
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-3 rounded-lg border p-3 bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => { setIsEvaluation(false); setFormData({ ...formData, patientId: '' }); }}
+                  className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
+                    !isEvaluation ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Paciente Cadastrado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsEvaluation(true); setFormData({ ...formData, patientId: 'eval-temp' }); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition-colors ${
+                    isEvaluation ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Paciente Avaliação
+                </button>
+              </div>
+            </div>
+
+            {/* Campo de paciente */}
             <div className="space-y-2">
-              <Label htmlFor="patientId">Paciente *</Label>
-              <Select
-                value={formData.patientId}
-                onValueChange={(value) => setFormData({ ...formData, patientId: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o paciente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allPatients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isEvaluation ? (
+                <>
+                  <Label htmlFor="evalName">Nome do Paciente (Avaliação)</Label>
+                  <Input
+                    id="evalName"
+                    placeholder="Nome completo (opcional)"
+                    value={evalName}
+                    onChange={(e) => setEvalName(e.target.value)}
+                  />
+                  <p className="text-xs text-amber-600">Paciente de avaliação — não precisa estar cadastrado.</p>
+                </>
+              ) : (
+                <>
+                  <Label htmlFor="patientId">Paciente *</Label>
+                  <Select
+                    value={formData.patientId}
+                    onValueChange={(value) => setFormData({ ...formData, patientId: value })}
+                    required={!isEvaluation}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o paciente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allPatients.map((patient) => (
+                        <SelectItem key={patient.id} value={patient.id}>
+                          {patient.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -193,11 +253,24 @@ export default function AppointmentForm({ appointment, onClose }: AppointmentFor
             </div>
           </div>
 
+          <div className="space-y-2">
+              <Label htmlFor="notes">Observações</Label>
+              <Input
+                id="notes"
+                placeholder="Observações adicionais"
+                value={formData.notes || ''}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              />
+            </div>
+
           <div className="flex gap-3 justify-end pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button
+              type="submit"
+              disabled={!isEvaluation && !formData.patientId}
+            >
               {appointment ? 'Atualizar' : 'Agendar'}
             </Button>
           </div>

@@ -116,18 +116,31 @@ export default function Schedule() {
             <div className="space-y-3">
               {dayAppointments.map((apt) => {
                 const patient = patients.getById(apt.patientId);
+                const isEval = apt.patientId?.startsWith('eval-');
+                const evalName = apt.notes?.match(/\[Avaliação: (.+?)\]/)?.[1];
+                const displayName = isEval
+                  ? (evalName || 'Avaliação')
+                  : patient?.name || 'Paciente não encontrado';
                 return (
                   <div 
                     key={apt.id}
                     className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="flex h-16 w-16 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <div className={cn(
+                        'flex h-16 w-16 flex-col items-center justify-center rounded-lg text-primary',
+                        isEval ? 'bg-amber-100 text-amber-700' : 'bg-primary/10'
+                      )}>
                         <span className="text-2xl font-bold">{apt.time.split(':')[0]}</span>
                         <span className="text-xs">{apt.time.split(':')[1]}</span>
                       </div>
                       <div>
-                        <p className="font-semibold text-lg">{patient?.name || 'Paciente não encontrado'}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-lg">{displayName}</p>
+                          {isEval && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Avaliação</span>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">{apt.procedureType}</p>
                         <p className="text-xs text-muted-foreground mt-1">Duração: {apt.duration} min</p>
                       </div>

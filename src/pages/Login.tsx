@@ -117,14 +117,7 @@ export default function Login() {
                 Entrar
               </Button>
 
-              <div className="mt-6 rounded-lg bg-blue-50 p-4 text-sm">
-                <p className="font-semibold text-blue-900 mb-2">Credenciais de teste:</p>
-                <div className="space-y-1 text-blue-700">
-                  <p><strong>Admin:</strong> admin@sorrisotech.com / admin123</p>
-                  <p><strong>Dentista:</strong> dentista@sorrisotech.com / dentista123</p>
-                  <p><strong>Recepção:</strong> recepcao@sorrisotech.com / recepcao123</p>
-                </div>
-              </div>
+
             </form>
           </CardContent>
         </Card>
